@@ -90,7 +90,7 @@ const Compiler = (props: Props) => {
   // setTimeout(methods, 1);
 
   return (
-    <div>
+    <div className="h-screen w-1/2">
       <textarea name="compiler" id="compiler" cols={30} rows={10}></textarea>
       <button onClick={run}>Click</button>
     </div>
