@@ -1,6 +1,10 @@
 import { gql, useSubscription } from '@apollo/client';
 import * as React from 'react';
+import { useRef } from 'react';
 import { setTimeout } from 'timers';
+import CodeMirror from '@uiw/react-codemirror';
+import 'codemirror/keymap/sublime';
+import 'codemirror/theme/monokai.css';
 
 type Props = {
   
@@ -89,10 +93,36 @@ const Compiler = (props: Props) => {
 
   // setTimeout(methods, 1);
 
+  const Terminal = () => {
+
+    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+    const updateHeight = (data: any) => {
+      if (textAreaRef.current) {
+        textAreaRef.current.style.height = "1px";
+        textAreaRef.current.style.height = (5 + textAreaRef.current?.scrollHeight) + "px";
+      }
+    }
+
+    return (
+      <div className="bg-white rounded p-4 my-2" style={{ boxShadow: '0px 3px 10px 0px rgba(0,0,0,0.2)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <p>CODE</p>
+          <div className="w-8 h-8 flex justify-center items-center rounded-full p-2" style={{ boxShadow: '0px 0px 10px 0px rgba(0,0,0,0.2)' }}>
+            <div style={{width: '0', height: '0',  borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft:'10px solid black'}}/>
+          </div>
+        </div>
+        <CodeMirror value='//write your code' options={{ theme: 'monokai', keyMap: 'sublime', mode: 'js'}}/>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-1/2">
-      <textarea name="compiler" id="compiler" cols={30} rows={10}></textarea>
-      <button onClick={run}>Click</button>
+      <div className="w-full bg-white-900" style={{boxShadow: '0px 5px 10px 5px rgba(0,0,0,0.2)', height: '50px'}}></div>
+      <div className="h-full p-5" style={{ height: 'calc(100%-50px)'}}>
+        <Terminal/>
+      </div>
     </div>
   );
 };
