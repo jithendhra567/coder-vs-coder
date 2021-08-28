@@ -1,13 +1,14 @@
 // @flow 
+import { useSubscription } from '@apollo/client';
+import gql from 'graphql-tag';
 import { title } from 'process';
 import * as React from 'react';
 import { useRef } from 'react';
 import { useState } from 'react';
 import { useEffect } from 'react';
+import { color1, color2 } from '../Config';
 import '../index.css';
-
-const color1 = '#E63E6D';
-const color2 = '#0F52BA'
+import { useLocation } from "react-router-dom";
 
 type Tile = {
   id: string;
@@ -24,8 +25,38 @@ type User = {
   color: string;
 }
 
-export const Game = () => {
+type Room = {
+  inbox: {
+    message: string;
+    type: string;
+  };
+  users: User[];
+  move: {
+    type: string;
+    parameters: {
+      to: position; 
+      from: position;
+      user: {
+        id: string;
+        name: string;
+        color: string;
+      };
+      value: string;
+    };
+    returnValue: position;
+    isCompleted: boolean;
+  }
+}
 
+type position = {
+  i: number;
+  j: number
+}
+
+export const Game = () => {
+  const location: any = useLocation();
+  const roomId = location.state.roomId;
+  console.log(roomId);
   const tempRow: Tile[][] = [];
   for (let i = 0; i < 19; i++){
     const tempCol: Tile[] = [];
@@ -36,6 +67,62 @@ export const Game = () => {
 
   const [boardData, setBoardData] = useState<Tile[][]>(tempRow);
   const boardDataRef = useRef<Tile[][]>(tempRow);
+
+  const ROOM_SUBSCRIPTION = gql`
+    subscription MySubscription {
+      getroom(id: "${roomId}") {
+        inbox {
+          message
+          type
+        }
+        users {
+          color
+          id
+          name
+          occupiedTiles {
+            i
+            j
+          }
+          position {
+            i
+            j
+          }
+          power
+        }
+        move {
+          type
+          parameters {
+            to {
+              i
+              j
+            }
+            from {
+              i
+              j
+            }
+            user {
+              id
+              name
+              color
+            }
+            value
+          }
+          returnValue {
+            i
+            j
+          }
+          isCompleted
+        }
+      } 
+    }
+  `;
+
+  const { data, loading } = useSubscription(
+    ROOM_SUBSCRIPTION,
+    { variables: { id: roomId } }
+  );
+  const roomdata: Room = data?.getroom;
+  console.log(roomdata, loading);
 
   const Tile = (props: Tile) => {
     const style: any = {
@@ -74,17 +161,17 @@ export const Game = () => {
     color: color2
   };
 
+  console.log('in main');
+
   const run = async () => {
     await attack([18, 1], user2);
-
     await moveTo([18, 18], user1);
     await moveTo([1, 1], user1);
     await moveTo([1, 18], user1);
     await moveTo([18, 18], user1);
     await moveTo([1, 1], user1);
     await moveTo([1, 18], user1);
-   //await attack([1, 1], user1);
-
+    //await attack([1, 1], user1);
     //await attackFrom([18, 1], [18, 18], user2);
   }
 

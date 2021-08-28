@@ -95,15 +95,6 @@ const Compiler = (props: Props) => {
 
   const Terminal = () => {
 
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
-
-    const updateHeight = (data: any) => {
-      if (textAreaRef.current) {
-        textAreaRef.current.style.height = "1px";
-        textAreaRef.current.style.height = (5 + textAreaRef.current?.scrollHeight) + "px";
-      }
-    }
-
     return (
       <div className="bg-white rounded p-4 my-2" style={{ boxShadow: '0px 3px 10px 0px rgba(0,0,0,0.2)' }}>
         <div className="flex items-center justify-between mb-2">
