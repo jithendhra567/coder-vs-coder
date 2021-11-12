@@ -6,14 +6,17 @@ import App from './App';
 import apolloSetup from './utils/apolloSetup';
 import reportWebVitals from './reportWebVitals';
 import { ApolloProvider } from '@apollo/client';
+import { RecoilRoot } from 'recoil';
 
 ReactDOM.render(
   <React.StrictMode>
-    <ApolloProvider client={apolloSetup}>
-      <HelmetProvider>
-        <App />
-      </HelmetProvider>
-    </ApolloProvider>
+    <RecoilRoot>
+      <ApolloProvider client={apolloSetup}>
+        <HelmetProvider>
+          <App />
+        </HelmetProvider>
+      </ApolloProvider>
+    </RecoilRoot>
   </React.StrictMode>,
   document.getElementById('root')
 );

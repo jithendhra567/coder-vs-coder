@@ -2,9 +2,13 @@ import { gql, useSubscription } from '@apollo/client';
 import * as React from 'react';
 import { useRef } from 'react';
 import { setTimeout } from 'timers';
-import CodeMirror from '@uiw/react-codemirror';
+import CodeMirror, { IEditorInstance } from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
 import 'codemirror/theme/monokai.css';
+import gsap from 'gsap';
+import { green, Terminal } from '../utils/constant';
+import { useEffect } from 'react';
+import { createRef } from 'react';
 
 type Props = {
   
@@ -12,11 +16,7 @@ type Props = {
 
 const Compiler = (props: Props) => {
 
-  const run = () => {
-    const data: any = document.getElementById('compiler');
-    const code = data.value;
-    setTimeout(data.value, 1);
-  }
+  const [terminals ,setTerminals] = React.useState<Terminal[]>([{id: 0, status: 0, code: '',}]);
 
   // const USER_SUBSCRIPTION = gql`
   //   subscription MySubscription($id: String!) {
@@ -93,26 +93,49 @@ const Compiler = (props: Props) => {
 
   // setTimeout(methods, 1);
 
-  const Terminal = () => {
-
+  const Terminal = (props: Terminal) => {
+    const runRef = createRef<HTMLParagraphElement>();
+    const codeRef: any = createRef<IEditorInstance>();
+    const layoutRef = createRef<HTMLDivElement>();
+    useEffect(() => {
+      if (props.status === 0) {
+        gsap.from(layoutRef.current, {
+          duration: 0.5,
+          width: 0,
+        });
+        console.log(codeRef.current.textarea.value);
+      }
+      else {
+        gsap.to(runRef.current, {
+          duration: 0.5,
+          background: 'grey',
+          boxShadow: '0px 0px 0px 0px',
+        })
+      }
+    });
+    const run = () => {
+      if (props.status !== 0) return;
+      const tempTerminals = [...terminals];
+      tempTerminals[props.id].status = 1;
+      tempTerminals.push({id: props.id+1, status: 0, code: props.code});
+      setTerminals(tempTerminals);
+    }
     return (
-      <div className="bg-white rounded p-4 my-2" style={{ boxShadow: '0px 3px 10px 0px rgba(0,0,0,0.2)' }}>
+      <div ref={layoutRef} className="bg-white p-4 my-4" style={{ boxShadow: '2px 3px 5px 0px rgba(0,0,0,0.2)', borderLeft: '5px solid '+green, borderRadius: '3px 10px 10px 2px'}}>
         <div className="flex items-center justify-between mb-2">
           <p>CODE</p>
-          <div className="w-8 h-8 flex justify-center items-center rounded-full p-2" style={{ boxShadow: '0px 0px 10px 0px rgba(0,0,0,0.2)' }}>
-            <div style={{width: '0', height: '0',  borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft:'10px solid black'}}/>
-          </div>
+          <p onClick={run} ref={runRef} className='cursor-pointer text-center py-1 px-4 rounded text-sm text-white' style={{ boxShadow: '3px 4px 5px 0px rgba(0,0,0,0.2)', background: green}}>▶</p>
         </div>
-        <CodeMirror value='//write your code' options={{ theme: 'monokai', keyMap: 'sublime', mode: 'js'}}/>
+        <CodeMirror ref={codeRef} value='//write your code' options={{ theme: 'monokai', keyMap: 'sublime', mode: 'js'}}/>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-1/2">
-      <div className="w-full bg-white-900" style={{boxShadow: '0px 5px 10px 5px rgba(0,0,0,0.2)', height: '50px'}}></div>
-      <div className="h-full p-5" style={{ height: 'calc(100%-50px)'}}>
-        <Terminal/>
+    <div className="h-screen w-1/2 relative">
+      <div className="w-full bg-white-900 absolute top-0" style={{boxShadow: '0px 5px 10px 5px rgba(0,0,0,0.2)', height: '50px'}}></div>
+      <div className="p-5" style={{ maxHeight: 'calc(100%-50px)', marginTop: '50px', overflow: 'auto' }}>
+        {terminals.map(terminal => <Terminal key={terminal.id} id={terminal.id} code={terminal.code} status={terminal.status} powerUsed={terminal.powerUsed}/>)}
       </div>
     </div>
   );
