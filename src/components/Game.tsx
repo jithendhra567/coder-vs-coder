@@ -1,108 +1,283 @@
 // @flow 
+import { useSubscription } from '@apollo/client';
+import gql from 'graphql-tag';
 import { title } from 'process';
 import * as React from 'react';
 import { useRef } from 'react';
 import { useState } from 'react';
 import { useEffect } from 'react';
+import { color1, color2, debounce, Move, Moves, position, Room, roomDataAtom, Tile, TileRow, User, usersAtom } from '../utils/constant';
 import '../index.css';
+import { useLocation } from "react-router-dom";
+import { useRecoilState } from 'recoil';
+import { Constants } from '../utils/constant';
+import { motion } from 'framer-motion';
 
-const color1 = '#E63E6D';
-const color2 = '#0F52BA'
-
-type Tile = {
-  id: string;
-  attackType: string | undefined;
-  isOccupiedBy: undefined | User;
-}
-
-type User = {
-  id: string;
-  name: string;
-  position: number[];
-  occupiedTiles: number[][];
-  power: number;
-  color: string;
-}
-
+// let init = false;
 export const Game = () => {
-
+  const location: any = useLocation();
+  const roomId: string = location.state.roomId;
+  const userName: string = location.state.userName;
+  const userId: string = location.state.userId;
+  const isLeader: boolean = location.state.isLeader;
   const tempRow: Tile[][] = [];
   for (let i = 0; i < 19; i++){
     const tempCol: Tile[] = [];
     for (let j = 0; j < 19; j++)
-      tempCol.push({id: i+','+j, attackType: undefined, isOccupiedBy: undefined});
+      tempCol.push({info: i+','+j, id: roomId+"__"+i+','+j});
     tempRow.push(tempCol);
   }
 
   const [boardData, setBoardData] = useState<Tile[][]>(tempRow);
-  const boardDataRef = useRef<Tile[][]>(tempRow);
+  // const roomData = useRef<Room>();
+  const [roomDataGlobal, setRoomDataGlobal] = useRecoilState<Room>(roomDataAtom);
+  
+  const [users, setUsers] = useState<User[]>([]);
+  const moves = useRef<Moves>({id: roomId + "__" + Constants.makingMoves,moves: []});
+  const completedMoves = useRef<Moves>({ id: roomId + "__" + Constants.completedMoves, moves: [] });
+  const movesMap = useRef<Map<string, Move>>(new Map()).current;
 
-  const Tile = (props: Tile) => {
-    const style: any = {
-      margin: '.5px',
-      cursor: 'pointer',
+  const movesSubscription = () => {
+    const MOVES_SUBSCRIPTION = gql`
+      subscription MySubscription {
+        getmakingMoves(id: "${roomId+"__"+Constants.makingMoves}") {
+          moves {
+            parameters {
+              from {
+                i
+                j
+              }
+              to {
+                i
+                j
+              }
+              userId
+              value
+            }
+            type
+            id
+          }
+        }
+      }    
+    `;
+    const { data, loading } = useSubscription(MOVES_SUBSCRIPTION,{ variables: { id: roomId } });
+    const makingMoves: Moves = data?.getmakingMoves;
+    moves.current = makingMoves;
+    console.log(moves);
+  }
+  const completedMovesSubscription = () => {
+    const COMPLETED_MOVES_SUBSCRIPTION = gql`
+      subscription MySubscription {
+        getcompletedMoves(id: "${roomId+"__"+Constants.completedMoves}") {
+          moves {
+            parameters {
+              from {
+                i
+                j
+              }
+              to {
+                i
+                j
+              }
+              userId
+              value
+            }
+            type
+            id
+          }
+        }
+      }    
+    `;
+    const { data, loading } = useSubscription(COMPLETED_MOVES_SUBSCRIPTION,{ variables: { id: roomId } });
+    const completedMovesData: Moves = data?.getcompletedMoves;
+    completedMoves.current = completedMovesData;
+  }
+
+  // init
+  // roomSubscription();
+  movesSubscription();
+  completedMovesSubscription();
+
+  //updating room data  
+  useEffect(()=> setUsers(roomDataGlobal?roomDataGlobal.users:[]) , [roomDataGlobal]);
+
+  //updating moves data
+  const updateMovesData = () => {
+    if (moves.current?.moves && moves.current.moves.length > 0) {
+      moves.current.moves.forEach(move => {
+        if (!movesMap.has(move.id)) {
+          movesMap.set(move.id, move);
+          switch (move.type) {
+            case 'jump': {
+              const params = move.parameters;
+              if (!params?.userId) return;
+              const user = getUserFromId(params.userId);
+              if (params.to) jump([params.to.i, params.to.j], user);
+              user.power = user.power - 0.5;
+              if (params.to) user.position = { i: params.to.i, j: params.to.j };
+            }
+              break;
+            case 'move': {
+              const params = move.parameters;
+              if (!params?.userId) return;
+              const user = getUserFromId(params.userId);
+              if (params.to) moveTo([params.to.i, params.to.j], user);
+              user.position = { i: params.to?.i ?? 0, j: params.to?.j ?? 0 };
+            }
+              break;
+            case 'attack': {
+              const params = move.parameters;
+              if (!params?.userId || !params.to || !params.from) return;
+              const user = getUserFromId(params.userId);
+              attackFrom([params.from.i, params.from.j], [params.to.i, params.to.j], user, move.id).then(() => {
+                const temp = movesMap.get(move.id);
+                if (!temp || !params.to || !params.from) return;
+                temp.returnValue = { i: params.to.i, j: params.to.j };
+                if (isLeader) fetchGraphQL(linkWithCompletedMoves(move.id, temp?.returnValue), "MyMutation", {}).then(() => console.log('completed attack'));
+              });
+            }
+          }
+        }
+      });
     }
-    style['backgroundColor'] = props.isOccupiedBy?.color;
-    return (
-      <div className=" w-8 h-8 tile" style={style} id={props.id}>
-        <p className="m-0 text-xs hidden tileText" style={{ color: props.isOccupiedBy ? 'white' : 'black' }}>{props.id}</p>
-      </div>
-    );
   }
+  useEffect(updateMovesData, [moves.current]);
 
-  const InfoTile = (props:{id: number}) => {
-    return <div className="w-8 h-8 flex items-center text-white justify-center" style={{margin: '.5px'}}>
-      <p className="m-0 text-sm">{ props.id }</p>
-    </div>
+  //updating completed moves data
+  const updateCompletedMovesData = () => {
+    if(completedMoves.current?.moves && completedMoves.current.moves.length > 0){
+      completedMoves.current.moves.forEach(move => {
+        if (movesMap.has(move.id)) {
+          if (!isLeader) {
+            if (move.returnValue != movesMap.get(move.id)?.returnValue) {
+              //if not synced
+              
+            }
+            fetchGraphQL(deleteMove(move.id), "MyMutation", {});
+          }
+          setTimeout(() => {
+            switch (move.type) {
+              case 'attack':
+                if (move.parameters?.from && move.parameters?.to) {
+                  const from = [move.parameters?.from.i, move.parameters?.from.j];
+                  const to = [move.parameters?.to?.i, move.parameters?.to?.j];
+                  attackFrom(from, to, undefined, undefined);
+                }
+            }
+          } , 3000);
+        }
+      });
+    }
   }
-
-  const user1 = {
-    id: 'someId',
-    name: 'jithendhra',
-    position: [0, 0],
-    occupiedTiles: [],
-    power: 100,
-    color: color1
-  };
-
-  const user2 = {
-    id: 'someId',
-    name: 'lokesh',
-    position: [0, 0],
-    occupiedTiles: [],
-    power: 100,
-    color: color2
-  };
+  useEffect(updateCompletedMovesData, [completedMoves.current]);
 
   const run = async () => {
-    await attack([18, 1], user2);
-
-    await moveTo([18, 18], user1);
-    await moveTo([1, 1], user1);
-    await moveTo([1, 18], user1);
-    await moveTo([18, 18], user1);
-    await moveTo([1, 1], user1);
-    await moveTo([1, 18], user1);
-   //await attack([1, 1], user1);
-
-    //await attackFrom([18, 1], [18, 18], user2);
+    const moveId = new Date().getTime() + "__" + roomId + "__" + userName;
+    const move: Move = {
+      id: moveId,
+      makingMoves: {
+        id: roomId + "__" + Constants.makingMoves
+      },
+      type: "attack",
+      parameters: {
+        from: {i: 0,j: 0},
+        to: {i: 0,j: 18},
+        userId: userId,
+      },
+    };
+    await fetchGraphQL(addMove(move), "MyMutation", {});
+    
+    const moveId2 = new Date().getTime() + "__" + roomId + "__" + userName;
+    const move2: Move = {
+      id: moveId2,
+      makingMoves: {
+        id: roomId + "__" + Constants.makingMoves
+      },
+      type: "attack",
+      parameters: {
+        from: {i: 0,j: 0},
+        to: {i: 18,j: 18},
+        userId: userId,
+      },
+    };
+    await fetchGraphQL(addMove(move2), "MyMutation", {});
+    
   }
 
+  async function fetchGraphQL(operationsDoc: any, operationName: any, variables: any) {
+    const result = await fetch(
+      "https://green-wave.ap-south-1.aws.cloud.dgraph.io/graphql",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Auth-Token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJzL3Byb3h5IiwiZHVpZCI6IjB4MjM0ZjAwYyIsImV4cCI6MTYzMDI0Njk2MCwiaXNzIjoicy9hcGkifQ.WIhupejwaJCl4UqGRSNWZxGLIpnsK4qPeSpgW3zQ1bg"
+        },
+        body: JSON.stringify({
+          query: operationsDoc,
+          variables: variables,
+          operationName: operationName
+        })
+      }
+    );
+  
+    return await result.json();
+  }
+  
+  const addMove = (move: Move) => `
+    mutation MyMutation {
+      addmove(input: {id: "${move.id}", type: "${move.type}", makingMoves: {id: "${move.makingMoves.id}"},
+        parameters: {from: {i: ${move.parameters?.from?.i}, j: ${move.parameters?.from?.j}}, to: {i: ${move.parameters?.to?.i}, j: ${move.parameters?.to?.j}}, userId: "${move.parameters?.userId}"}}) {
+        numUids
+      }
+    }
+  `;
+
+  const deleteMove = (moveId: string) => `
+    mutation MyMutation {
+      deletemove(filter: {id: {eq: "${moveId}"}}) {
+        msg
+        numUids
+      }
+    }
+  `;
+
+  const linkWithCompletedMoves = (moveId: string, returnValue: position) => `
+    mutation MyMutation {
+      updatemove(input: {filter: {id: {eq: "${moveId}"}}, set: {returnValue: {i: ${returnValue.i}, j: ${returnValue.j}} ,completedMoves: {id: "${roomId}__completedMoves"}}}) {
+        numUids
+      }
+    }  
+  `;
+
+  const getUserFromId = (id: string) => {
+    const user = users.filter(user => user.id === id);
+    return user[0];
+  }
+
+  const updateUser = (user: User) => `
+    mutation MyMutation {
+      updateuser(input: {filter: {id: {eq: "${user.id}"}}, set: {position: {i: ${user.position.i}, j: ${user.position.j}}, power: ${user.power}}}) {
+        numUids
+      }
+    }
+  `;
+
   const jump = async (to: number[], user: User) => {
-    const userDoc = document.getElementById('user1');
+    const userDoc = document.getElementById(user.name);
     const top = 2.3;
     const left = 2.3;
     if (userDoc) {
       userDoc.style.top = (top + 2.0625 * to[0]) + 'rem';
       userDoc.style.left = (left + 2.0625 * to[1]) + 'rem';
     }
-    if (user.name == 'lokesh') user2.position = to.map(a => a);
-    else user1.position = to.map(a => a);
+    // if (user.name == 'lokesh') user2.position = to.map(a => a);
+    // else user1.position = to.map(a => a);
     await sleep(250);
   }
 
   const moveTo = async (to: number[], user: User) => {
-    const from = user.position.map(a => a);
+    const from = [user.position.i, user.position.j];
     while (!(from[0] == to[0]) || !(from[1] == to[1])) {
       if (from[0] < to[0]) from[0]++;
       else if (from[0] > to[0]) from[0]--;
@@ -112,48 +287,68 @@ export const Game = () => {
     }
   }
 
-  const attackFrom = async (from: number[], to: number[], user: User) => {
-    await occupy(from, user);
+  const attackFrom = async (from: number[], to: number[], user: User | undefined, moveId: string | undefined) => {
+    await occupy(from, user, moveId);
     while (!(from[0] == to[0]) || !(from[1] == to[1])) {
       if (from[0] < to[0]) from[0]++;
       else if (from[0] > to[0]) from[0]--;
       if (from[1] < to[1]) from[1]++;
       else if (from[1] > to[1]) from[1]--;
-      await occupy(from, user);
+      await occupy(from, user,moveId);
     }
-    setBoardData(boardDataRef.current.map(a => a.map(a => a)));
   }
 
-  const attack = async (to: number[], user: User) => {
-    const from = user.position;
-    await attackFrom(from, to, user);
+  const attack = async (to: number[], user: User, moveId: string|undefined) => {
+    const from = [user?.position.i, user?.position.j];
+    await attackFrom(from, to, user, moveId);
   }
 
-  const occupy = async (position: number[], user: User) => {
-    boardDataRef.current[position[0]][position[1]].isOccupiedBy = user;
-    const doc = document.getElementById(position.toString());
-    if(doc) doc.style.backgroundColor = user.color;
-    await sleep(250);
+  const occupy = async (position: number[], user: User | undefined, moveId: string|undefined) => {
+    const temp = boardData.map(x => x.map(y => y));
+    temp[position[0]][position[1]].owner = user?.id;
+    temp[position[0]][position[1]].moveId = moveId;
+    setBoardData(temp);
+    await sleep(200);
   }
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(() => resolve(ms), ms));
 
   return (
-    <div className="flex justify-center items-center bg-gray-900 w-1/2 overflow-auto h-screen">
+    <div className="flex flex-col justify-center items-center bg-gray-900 w-1/2 overflow-auto h-screen">
       <div className="m-5 relative">
-        <div id='user1' className="absolute m-0 w-6 h-6 text-sm text-white flex justify-center items-center rounded-full"
-          style={{ backgroundColor: user1.color, top: '2.3rem', left: '2.3rem', transition: 'all .2s ease' }}>{user1.name.toUpperCase()[0]}</div>
+        {users.map((user,index) => {
+          return (
+            <div id={user.name} key={index} className="absolute m-0 w-6 h-6 text-sm text-white flex justify-center items-center rounded-full"
+              style={{ backgroundColor: user.color, top: (2.3 + 2.0625 * user.position.i) + 'rem', left: (2.3 + 2.0625 * user.position.j) + 'rem', transition: 'all .2s ease' }}>{user.name.toUpperCase()[0]}</div>
+          );
+        })}
         <div className="flex ml-8">
-          {boardData.map(row => <InfoTile id={+row[0].id.split(',')[0]} key={row[0].id.split(',')[0]} />)}
+          {boardData.map(row => <p className="w-8 h-8 flex items-center text-white justify-center m-0 text-sm" key={row[0].info.split(',')[0]} style={{margin: '.5px'}}>{ row[0].info.split(',')[0] }</p>)}
         </div>
         {
           boardData.map(row =>
-          <div className="flex justify-center" key={row[0].id.split(',')[0]}>
-            <InfoTile id={+row[0].id.split(',')[0]} key={row[0].id.split(',')[0]} />
-            {row.map(col => <Tile id={col.id} attackType = {col.attackType} isOccupiedBy = {col.isOccupiedBy} key={col.id} />)}
-          </div>
-        )}
+          <div className="flex justify-center" key={row[0].info.split(',')[0]}>
+            <p className="w-8 h-8 flex items-center text-white justify-center m-0 text-sm" key={row[0].info.split(',')[0]} style={{margin: '.5px'}}>{ row[0].info.split(',')[0] }</p>
+              {row.map(col => {
+                const style: any = { margin: '15px', cursor: 'pointer' };
+                const animaterStyle: any = {};
+                let animaterClass: string = 'animater';
+                if (col.owner) {
+                  animaterStyle['backgroundColor'] = getUserFromId(col.owner).color;
+                  animaterStyle['width'] = "2rem";
+                  animaterStyle['height'] = "2rem";
+                  //animaterClass += ' tileAnimater';
+                }
+                return (<motion.div animate={{ margin: '.5px' }} transition={{ type: 'spring', duration: 0.5 }} className="w-8 h-8 tile" style={style} id={col.id} key={row[0].info.split(',')[0] + '' + col.id}>
+                  <div className={animaterClass} style={animaterStyle}></div>
+                  <p className="m-0 text-xs hidden tileText" style={{ color: col.owner ? 'white' : 'black' }}>{col.info}</p>
+                </motion.div>);
+              })}
+          </div>)
+        }
       </div>
+      <div onClick={run} id='create' className="rounded justify-center items-center flex cursor-pointer text-white px-5 py-2"
+              style={{ backgroundColor: color1 ,boxShadow: '0px 3px 3px 0px rgba(0,0,0,0.2)' }}>RUN</div>
     </div>
   );
 };
