@@ -31,3 +31,15 @@ code {
 .tile:hover .tileText{
   display: block;
 }
+
+@media screen and (max-width: 980px) {
+  .game{
+    display: block;
+  }
+  .compiler{
+    width: 100%;
+  }
+  .board{
+    width: 100%;
+  }
+}

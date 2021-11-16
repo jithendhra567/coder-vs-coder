@@ -6,58 +6,26 @@ import CodeMirror, { IEditorInstance } from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
 import 'codemirror/theme/monokai.css';
 import gsap from 'gsap';
-import { Constants, green, Move, Room, roomDataAtom, Terminal } from '../utils/constant';
+import { Constants, green, Move, Moves, Room, roomDataAtom, Terminal } from '../utils/constant';
 import { useEffect } from 'react';
 import { createRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useRecoilState } from 'recoil';
 
-type Props = {
-  
+type CompilerProps = {
+  roomData: Room | undefined;
+  moves: Moves;
+  completedMoves: Moves;
 };
 
-const Compiler = (props: Props) => {
+const Compiler = (props: CompilerProps) => {
 
   //constants
   const [terminals, setTerminals] = React.useState<Terminal[]>([{ id: 0, status: 0, code: '', }]);
-  const [roomDataGlobal, setRoomDataGlobal] = useRecoilState<Room>(roomDataAtom);
   const location: any = useLocation();
   const roomId: string = location.state.roomId;
   const userName: string = location.state.userName;
   const userId: string = location.state.userId;
   const isLeader: boolean = location.state.isLeader;
-
-  const roomSubscription = () => {
-    const ROOM_SUBSCRIPTION = gql`
-      subscription MySubscription {
-        getroom(id: "${roomId}") {
-          inbox {
-            message
-            type
-          }
-          users {
-            color
-            id
-            name
-            occupiedTiles {
-              i
-              j
-            }
-            position {
-              i
-              j
-            }
-            power
-          }
-        } 
-      }
-    `;
-    const { data, loading } = useSubscription(ROOM_SUBSCRIPTION,{ variables: { id: roomId } });
-    const room: Room = data?.getroom;
-    setRoomDataGlobal(room);
-  }
-
-  roomSubscription();
 
   //methods 
   const fetchGraphQL = async (operationsDoc: any, operationName: any, variables: any) => {
@@ -97,7 +65,6 @@ const Compiler = (props: Props) => {
       },
       type: "attack",
       parameters: {
-        from: {i: 0,j: 0},
         to: {i: i,j: j},
         userId: userId,
       },
@@ -159,11 +126,12 @@ const Compiler = (props: Props) => {
   }
 
   return (
-    <div className="h-screen w-1/2 relative">
-      <div className="w-full bg-white-900 absolute top-0" style={{boxShadow: '0px 5px 10px 5px rgba(0,0,0,0.2)', height: '50px'}}></div>
-      <div className="p-5" style={{ height: 'calc(100%-50px)', marginTop: '50px', overflow: 'auto' }}>
+    <div className="h-full w-1/2 relative compiler">
+      <div className="w-full bg-white-900" style={{boxShadow: '0px 2px 10px 5px rgba(0,0,0,0.2)', height: '5%'}}></div>
+      <div className="p-5" style={{ height: '90%', overflowY: 'scroll' }}>
         {terminals.map(terminal => <Terminal key={terminal.id} id={terminal.id} code={terminal.code} status={terminal.status} powerUsed={terminal.powerUsed}/>)}
       </div>
+      <div className="w-full bg-white-900" style={{boxShadow: '0px 5px 10px 5px rgba(0,0,0,0.2)', height: '5%'}}></div>
     </div>
   );
 };

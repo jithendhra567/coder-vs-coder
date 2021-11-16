@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import './index.css';
 import App from './App';
-import apolloSetup from './utils/apolloSetup';
+import apolloSetup from './utils/apolloConfig';
 import reportWebVitals from './reportWebVitals';
 import { ApolloProvider } from '@apollo/client';
 

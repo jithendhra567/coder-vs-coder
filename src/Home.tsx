@@ -114,7 +114,7 @@ const Home = () => {
   return (
     <div className='flex h-screen font-serif'>
       <div className="w-1/2 h-full justify-evenly flex flex-col items-center">
-        <p className="text-3xl " style={{fontFamily: 'ui-monospace'}}>coder vs coder</p>
+        <p className="text-3xl " style={{fontFamily: 'ui-monospace'}}>ME vs ME</p>
         <div className="w-3/4 h-3/4 rounded" style={{boxShadow: '0px 2px 5px 0px rgba(0,0,0,0.2)'}}>
           <ReactCodemirror value='//write your code' options={{ theme: 'monokai', keyMap: 'sublime', mode: 'js', readOnly: true}}/>
         </div>

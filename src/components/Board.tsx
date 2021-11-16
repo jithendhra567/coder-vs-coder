@@ -6,15 +6,18 @@ import * as React from 'react';
 import { useRef } from 'react';
 import { useState } from 'react';
 import { useEffect } from 'react';
-import { color1, color2, debounce, Move, Moves, position, Room, roomDataAtom, Tile, TileRow, User, usersAtom } from '../utils/constant';
+import { color1, color2, debounce, Move, Moves, position, Room, Tile, TileRow, User } from '../utils/constant';
 import '../index.css';
 import { useLocation } from "react-router-dom";
-import { useRecoilState } from 'recoil';
 import { Constants } from '../utils/constant';
 import { motion } from 'framer-motion';
 
-// let init = false;
-export const Game = () => {
+type BoardProps = {
+  roomData: Room | undefined;
+  moves: Moves;
+  completedMoves: Moves;
+}
+const Board = (props: BoardProps) => {
   const location: any = useLocation();
   const roomId: string = location.state.roomId;
   const userName: string = location.state.userName;
@@ -29,14 +32,41 @@ export const Game = () => {
   }
 
   const [boardData, setBoardData] = useState<Tile[][]>(tempRow);
-  // const roomData = useRef<Room>();
-  const [roomDataGlobal, setRoomDataGlobal] = useRecoilState<Room>(roomDataAtom);
-  
+  const roomData = useRef<Room>();
   const [users, setUsers] = useState<User[]>([]);
   const moves = useRef<Moves>({id: roomId + "__" + Constants.makingMoves,moves: []});
   const completedMoves = useRef<Moves>({ id: roomId + "__" + Constants.completedMoves, moves: [] });
   const movesMap = useRef<Map<string, Move>>(new Map()).current;
 
+  const roomSubscription = () => {
+    const ROOM_SUBSCRIPTION = gql`
+      subscription MySubscription {
+        getroom(id: "${roomId}") {
+          inbox {
+            message
+            type
+          }
+          users {
+            color
+            id
+            name
+            occupiedTiles {
+              i
+              j
+            }
+            position {
+              i
+              j
+            }
+            power
+          }
+        } 
+      }
+    `;
+    const { data, loading } = useSubscription(ROOM_SUBSCRIPTION,{ variables: { id: roomId } });
+    const room: Room = data?.getroom;
+    roomData.current = room;
+  }
   const movesSubscription = () => {
     const MOVES_SUBSCRIPTION = gql`
       subscription MySubscription {
@@ -62,8 +92,7 @@ export const Game = () => {
     `;
     const { data, loading } = useSubscription(MOVES_SUBSCRIPTION,{ variables: { id: roomId } });
     const makingMoves: Moves = data?.getmakingMoves;
-    moves.current = makingMoves;
-    console.log(moves);
+    if(makingMoves) moves.current = makingMoves;
   }
   const completedMovesSubscription = () => {
     const COMPLETED_MOVES_SUBSCRIPTION = gql`
@@ -94,12 +123,12 @@ export const Game = () => {
   }
 
   // init
-  // roomSubscription();
+  roomSubscription();
   movesSubscription();
   completedMovesSubscription();
 
   //updating room data  
-  useEffect(()=> setUsers(roomDataGlobal?roomDataGlobal.users:[]) , [roomDataGlobal]);
+  useEffect(()=> setUsers(roomData.current?roomData.current.users:[]) , [roomData.current]);
 
   //updating moves data
   const updateMovesData = () => {
@@ -314,7 +343,7 @@ export const Game = () => {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(() => resolve(ms), ms));
 
   return (
-    <div className="flex flex-col justify-center items-center bg-gray-900 w-1/2 overflow-auto h-screen">
+    <div className="flex flex-col justify-center items-center bg-gray-900 w-1/2 overflow-auto h-screen board">
       <div className="m-5 relative">
         {users.map((user,index) => {
           return (
@@ -334,13 +363,13 @@ export const Game = () => {
                 const animaterStyle: any = {};
                 let animaterClass: string = 'animater';
                 if (col.owner) {
-                  animaterStyle['backgroundColor'] = getUserFromId(col.owner).color;
-                  animaterStyle['width'] = "2rem";
-                  animaterStyle['height'] = "2rem";
-                  //animaterClass += ' tileAnimater';
+                  style['backgroundColor'] = getUserFromId(col.owner).color;
+                  // animaterStyle['width'] = "2rem";
+                  // animaterStyle['height'] = "2rem";
+                  // animaterClass += ' tileAnimater';
                 }
                 return (<motion.div animate={{ margin: '.5px' }} transition={{ type: 'spring', duration: 0.5 }} className="w-8 h-8 tile" style={style} id={col.id} key={row[0].info.split(',')[0] + '' + col.id}>
-                  <div className={animaterClass} style={animaterStyle}></div>
+                  {/* <div className={animaterClass} style={animaterStyle}></div> */}
                   <p className="m-0 text-xs hidden tileText" style={{ color: col.owner ? 'white' : 'black' }}>{col.info}</p>
                 </motion.div>);
               })}
@@ -352,3 +381,5 @@ export const Game = () => {
     </div>
   );
 };
+
+export default Board;

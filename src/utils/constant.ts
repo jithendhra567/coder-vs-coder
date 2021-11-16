@@ -91,7 +91,7 @@ export const roomDataAtom = atom({
 
 export const usersAtom = atom({
   key: 'users',
-  default: [sample, sample]
+  default: []
 });
 
 export const debounce = (fun: Function, delay: number) => {
