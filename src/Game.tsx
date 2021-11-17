@@ -6,6 +6,7 @@ import gql from 'graphql-tag';
 import { Room, Constants, Moves } from './utils/constant';
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const Game = () => {
   const location: any = useLocation();
@@ -13,7 +14,10 @@ const Game = () => {
   const userName: string = location.state.userName;
   const userId: string = location.state.userId;
   const isLeader: boolean = location.state.isLeader;
-  const [roomData, setRoomData] = useState<Room>();
+  const tempRoomData = useRef<Room>({ inbox: {message: '', type: ''}, users: []});
+  const tempMoveData = useRef<Moves>({id: roomId + "__" + Constants.makingMoves,moves: []});
+  const tempCompletedData = useRef<Moves>({ id: roomId + "__" + Constants.completedMoves, moves: [] });
+  const [roomData, setRoomData] = useState<Room>({ inbox: {message: '', type: ''}, users: []});
   const [moves, setMoves] = useState<Moves>({id: roomId + "__" + Constants.makingMoves,moves: []});
   const [completedMoves, setCompletedMoves] = useState<Moves>({ id: roomId + "__" + Constants.completedMoves, moves: [] });
 
@@ -44,7 +48,8 @@ const Game = () => {
     `;
     const { data, loading } = useSubscription(ROOM_SUBSCRIPTION,{ variables: { id: roomId } });
     const room: Room = data?.getroom;
-    setRoomData(room);
+    tempRoomData.current = room;
+    console.log(tempRoomData.current);
   }
   const movesSubscription = () => {
     const MOVES_SUBSCRIPTION = gql`
@@ -71,7 +76,7 @@ const Game = () => {
     `;
     const { data, loading } = useSubscription(MOVES_SUBSCRIPTION,{ variables: { id: roomId } });
     const makingMoves: Moves = data?.getmakingMoves;
-    if(makingMoves) setMoves(makingMoves);
+    if(makingMoves) tempMoveData.current = makingMoves;
   }
   const completedMovesSubscription = () => {
     const COMPLETED_MOVES_SUBSCRIPTION = gql`
@@ -98,8 +103,19 @@ const Game = () => {
     `;
     const { data, loading } = useSubscription(COMPLETED_MOVES_SUBSCRIPTION,{ variables: { id: roomId } });
     const completedMovesData: Moves = data?.getcompletedMoves;
-    if(completedMoves) setCompletedMoves(completedMovesData);
+    if(completedMoves) tempCompletedData.current = completedMovesData;
   }
+
+  roomSubscription();
+  movesSubscription();
+  completedMovesSubscription();
+
+  useEffect(() => {
+    setRoomData(tempRoomData.current);
+    setMoves(tempMoveData.current);
+    setCompletedMoves(tempCompletedData.current);
+    console.log(tempCompletedData.current);
+  }, [tempRoomData.current, tempMoveData.current, tempCompletedData.current]);
 
   return (
     <div className="flex h-screen w-full game">

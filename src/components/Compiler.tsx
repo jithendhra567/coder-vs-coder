@@ -50,7 +50,7 @@ const Compiler = (props: CompilerProps) => {
   const addMove = (move: Move) => `
     mutation MyMutation {
       addmove(input: {id: "${move.id}", type: "${move.type}", makingMoves: {id: "${move.makingMoves.id}"},
-        parameters: {from: {i: ${move.parameters?.from?.i}, j: ${move.parameters?.from?.j}}, to: {i: ${move.parameters?.to?.i}, j: ${move.parameters?.to?.j}}, userId: "${move.parameters?.userId}"}}) {
+        parameters: {to: {i: ${move.parameters?.to?.i}, j: ${move.parameters?.to?.j}}, userId: "${move.parameters?.userId}"}}) {
         numUids
       }
     }
@@ -69,7 +69,8 @@ const Compiler = (props: CompilerProps) => {
         userId: userId,
       },
     };
-    await fetchGraphQL(addMove(move), "MyMutation", {});
+    console.log(addMove(move));
+    await fetchGraphQL(addMove(move), "MyMutation", {}).then(res=> console.log('succes',res)).catch(err=> console.log('err'));
   }
 
   useEffect(() => {

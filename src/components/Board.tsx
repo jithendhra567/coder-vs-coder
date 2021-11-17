@@ -6,17 +6,18 @@ import * as React from 'react';
 import { useRef } from 'react';
 import { useState } from 'react';
 import { useEffect } from 'react';
-import { color1, color2, debounce, Move, Moves, position, Room, Tile, TileRow, User } from '../utils/constant';
+import { color1, color2, debounce, getUserFromId, Move, Moves, position, Room, Tile, TileRow, User } from '../utils/constant';
 import '../index.css';
 import { useLocation } from "react-router-dom";
 import { Constants } from '../utils/constant';
 import { motion } from 'framer-motion';
 
 type BoardProps = {
-  roomData: Room | undefined;
+  roomData: Room;
   moves: Moves;
   completedMoves: Moves;
 }
+
 const Board = (props: BoardProps) => {
   const location: any = useLocation();
   const roomId: string = location.state.roomId;
@@ -31,174 +32,83 @@ const Board = (props: BoardProps) => {
     tempRow.push(tempCol);
   }
 
+  console.log(props.moves);
   const [boardData, setBoardData] = useState<Tile[][]>(tempRow);
-  const roomData = useRef<Room>();
   const [users, setUsers] = useState<User[]>([]);
-  const moves = useRef<Moves>({id: roomId + "__" + Constants.makingMoves,moves: []});
-  const completedMoves = useRef<Moves>({ id: roomId + "__" + Constants.completedMoves, moves: [] });
-  const movesMap = useRef<Map<string, Move>>(new Map()).current;
-
-  const roomSubscription = () => {
-    const ROOM_SUBSCRIPTION = gql`
-      subscription MySubscription {
-        getroom(id: "${roomId}") {
-          inbox {
-            message
-            type
-          }
-          users {
-            color
-            id
-            name
-            occupiedTiles {
-              i
-              j
-            }
-            position {
-              i
-              j
-            }
-            power
-          }
-        } 
-      }
-    `;
-    const { data, loading } = useSubscription(ROOM_SUBSCRIPTION,{ variables: { id: roomId } });
-    const room: Room = data?.getroom;
-    roomData.current = room;
-  }
-  const movesSubscription = () => {
-    const MOVES_SUBSCRIPTION = gql`
-      subscription MySubscription {
-        getmakingMoves(id: "${roomId+"__"+Constants.makingMoves}") {
-          moves {
-            parameters {
-              from {
-                i
-                j
-              }
-              to {
-                i
-                j
-              }
-              userId
-              value
-            }
-            type
-            id
-          }
-        }
-      }    
-    `;
-    const { data, loading } = useSubscription(MOVES_SUBSCRIPTION,{ variables: { id: roomId } });
-    const makingMoves: Moves = data?.getmakingMoves;
-    if(makingMoves) moves.current = makingMoves;
-  }
-  const completedMovesSubscription = () => {
-    const COMPLETED_MOVES_SUBSCRIPTION = gql`
-      subscription MySubscription {
-        getcompletedMoves(id: "${roomId+"__"+Constants.completedMoves}") {
-          moves {
-            parameters {
-              from {
-                i
-                j
-              }
-              to {
-                i
-                j
-              }
-              userId
-              value
-            }
-            type
-            id
-          }
-        }
-      }    
-    `;
-    const { data, loading } = useSubscription(COMPLETED_MOVES_SUBSCRIPTION,{ variables: { id: roomId } });
-    const completedMovesData: Moves = data?.getcompletedMoves;
-    completedMoves.current = completedMovesData;
-  }
-
-  // init
-  roomSubscription();
-  movesSubscription();
-  completedMovesSubscription();
+  // const roomData = useRef<Room>(props.roomData);
+  // const moves = useRef<Moves>(props.moves);
+  // const completedMoves = useRef<Moves>(props.completedMoves);
+  const movesMap = useRef<Map<string, Move>>(new Map());
 
   //updating room data  
-  useEffect(()=> setUsers(roomData.current?roomData.current.users:[]) , [roomData.current]);
+  useEffect(()=> setUsers(props.roomData?.users) , [props.roomData]);
 
   //updating moves data
   const updateMovesData = () => {
-    if (moves.current?.moves && moves.current.moves.length > 0) {
-      moves.current.moves.forEach(move => {
-        if (!movesMap.has(move.id)) {
-          movesMap.set(move.id, move);
-          switch (move.type) {
-            case 'jump': {
-              const params = move.parameters;
-              if (!params?.userId) return;
-              const user = getUserFromId(params.userId);
-              if (params.to) jump([params.to.i, params.to.j], user);
-              user.power = user.power - 0.5;
-              if (params.to) user.position = { i: params.to.i, j: params.to.j };
-            }
-              break;
-            case 'move': {
-              const params = move.parameters;
-              if (!params?.userId) return;
-              const user = getUserFromId(params.userId);
-              if (params.to) moveTo([params.to.i, params.to.j], user);
-              user.position = { i: params.to?.i ?? 0, j: params.to?.j ?? 0 };
-            }
-              break;
-            case 'attack': {
-              const params = move.parameters;
-              if (!params?.userId || !params.to || !params.from) return;
-              const user = getUserFromId(params.userId);
-              attackFrom([params.from.i, params.from.j], [params.to.i, params.to.j], user, move.id).then(() => {
-                const temp = movesMap.get(move.id);
-                if (!temp || !params.to || !params.from) return;
-                temp.returnValue = { i: params.to.i, j: params.to.j };
-                if (isLeader) fetchGraphQL(linkWithCompletedMoves(move.id, temp?.returnValue), "MyMutation", {}).then(() => console.log('completed attack'));
-              });
-            }
+    console.log(props.moves.id,'in moves');
+    props.moves?.moves.forEach(move => {
+      if (!movesMap.current.has(move.id)) {
+        movesMap.current.set(move.id, move);
+        switch (move.type) {
+          case 'jump': {
+            const params = move.parameters;
+            if (!params?.userId) return;
+            const user = getUserFromId(params.userId, users);
+            if (params.to) jump([params.to.i, params.to.j], user);
+            user.power = user.power - 0.5;
+            if (params.to) user.position = { i: params.to.i, j: params.to.j };
+          }
+            break;
+          case 'move': {
+            const params = move.parameters;
+            if (!params?.userId) return;
+            const user = getUserFromId(params.userId, users);
+            if (params.to) moveTo([params.to.i, params.to.j], user);
+            user.position = { i: params.to?.i ?? 0, j: params.to?.j ?? 0 };
+          }
+            break;
+          case 'attack': {
+            const params = move.parameters;
+            if (!params?.userId || !params.to || !params.from) return;
+            const user = getUserFromId(params.userId, users);
+            attack([params.to.i, params.to.j], user, move.id).then(() => {
+              const temp = movesMap.current.get(move.id);
+              if (!temp || !params.to || !params.from) return;
+              temp.returnValue = { i: params.to.i, j: params.to.j };
+              if (isLeader) fetchGraphQL(linkWithCompletedMoves(move.id, temp?.returnValue), "MyMutation", {}).then(() => console.log('completed attack'));
+            });
           }
         }
-      });
-    }
+      }
+    });
   }
-  useEffect(updateMovesData, [moves.current]);
+  useEffect(updateMovesData, [props.moves]);
 
   //updating completed moves data
   const updateCompletedMovesData = () => {
-    if(completedMoves.current?.moves && completedMoves.current.moves.length > 0){
-      completedMoves.current.moves.forEach(move => {
-        if (movesMap.has(move.id)) {
-          if (!isLeader) {
-            if (move.returnValue != movesMap.get(move.id)?.returnValue) {
-              //if not synced
-              
-            }
-            fetchGraphQL(deleteMove(move.id), "MyMutation", {});
+    props.completedMoves?.moves.forEach(move => {
+      if (movesMap.current.has(move.id)) {
+        if (!isLeader) {
+          if (move.returnValue != movesMap.current.get(move.id)?.returnValue) {
+            //if not synced
+            
           }
-          setTimeout(() => {
-            switch (move.type) {
-              case 'attack':
-                if (move.parameters?.from && move.parameters?.to) {
-                  const from = [move.parameters?.from.i, move.parameters?.from.j];
-                  const to = [move.parameters?.to?.i, move.parameters?.to?.j];
-                  attackFrom(from, to, undefined, undefined);
-                }
-            }
-          } , 3000);
+          fetchGraphQL(deleteMove(move.id), "MyMutation", {});
         }
-      });
-    }
+        setTimeout(() => {
+          switch (move.type) {
+            case 'attack':
+              if (move.parameters?.from && move.parameters?.to) {
+                const from = [move.parameters?.from.i, move.parameters?.from.j];
+                const to = [move.parameters?.to?.i, move.parameters?.to?.j];
+                attackFrom(from, to, undefined, undefined);
+              }
+          }
+        } , 3000);
+      }
+    });
   }
-  useEffect(updateCompletedMovesData, [completedMoves.current]);
+  useEffect(updateCompletedMovesData, [props.completedMoves]);
 
   const run = async () => {
     const moveId = new Date().getTime() + "__" + roomId + "__" + userName;
@@ -279,11 +189,6 @@ const Board = (props: BoardProps) => {
     }  
   `;
 
-  const getUserFromId = (id: string) => {
-    const user = users.filter(user => user.id === id);
-    return user[0];
-  }
-
   const updateUser = (user: User) => `
     mutation MyMutation {
       updateuser(input: {filter: {id: {eq: "${user.id}"}}, set: {position: {i: ${user.position.i}, j: ${user.position.j}}, power: ${user.power}}}) {
@@ -345,7 +250,7 @@ const Board = (props: BoardProps) => {
   return (
     <div className="flex flex-col justify-center items-center bg-gray-900 w-1/2 overflow-auto h-screen board">
       <div className="m-5 relative">
-        {users.map((user,index) => {
+        {users?.map((user,index) => {
           return (
             <div id={user.name} key={index} className="absolute m-0 w-6 h-6 text-sm text-white flex justify-center items-center rounded-full"
               style={{ backgroundColor: user.color, top: (2.3 + 2.0625 * user.position.i) + 'rem', left: (2.3 + 2.0625 * user.position.j) + 'rem', transition: 'all .2s ease' }}>{user.name.toUpperCase()[0]}</div>
@@ -363,7 +268,7 @@ const Board = (props: BoardProps) => {
                 const animaterStyle: any = {};
                 let animaterClass: string = 'animater';
                 if (col.owner) {
-                  style['backgroundColor'] = getUserFromId(col.owner).color;
+                  style['backgroundColor'] = getUserFromId(col.owner, users).color;
                   // animaterStyle['width'] = "2rem";
                   // animaterStyle['height'] = "2rem";
                   // animaterClass += ' tileAnimater';

@@ -101,3 +101,8 @@ export const debounce = (fun: Function, delay: number) => {
     setTimeout(() => fun(), delay);
   }
 }
+
+export const getUserFromId = (id: string, users: User[]) => {
+  const user = users.filter(user => user.id === id);
+  return user[0];
+}
