@@ -43,7 +43,6 @@ export type position = {
 
 export type Terminal = {
   id: number,
-  status: -1 | 0 | 1;
   code: string,
   powerUsed?: number,
 }
@@ -53,6 +52,8 @@ export const color1 = '#0F52BA';
 export const color2 = '#E63E6D';
 
 export const green = '#00BB7F';
+
+export const red = '#F01C65';
 
 export type User = {
   id: string;

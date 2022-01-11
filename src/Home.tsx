@@ -1,11 +1,8 @@
 import React, { Component } from 'react';
-import PropTypes from 'prop-types';
-import ReactCodemirror from '@uiw/react-codemirror';
 import { useRef } from 'react';
 import { color1, color2 } from './utils/constant';
 import { useHistory } from 'react-router-dom';
 import { Constants } from './utils/constant';
-import { motion } from 'framer-motion';
 
 const Home = () => {
 
@@ -116,13 +113,12 @@ const Home = () => {
       <div className="w-1/2 h-full justify-evenly flex flex-col items-center">
         <p className="text-3xl " style={{fontFamily: 'ui-monospace'}}>ME vs ME</p>
         <div className="w-3/4 h-3/4 rounded" style={{boxShadow: '0px 2px 5px 0px rgba(0,0,0,0.2)'}}>
-          <ReactCodemirror value='//write your code' options={{ theme: 'monokai', keyMap: 'sublime', mode: 'js', readOnly: true}}/>
+
         </div>
       </div>
       <div className="w-1/2 bg-gray-800 h-full justify-center items-center flex">
-        <motion.div animate={{ scale: 1 }} className="bg-white rounded flex-col justify-evenly items-center flex p-5" id='login'
-          style={{ boxShadow: '0px 0px 5px 5px rgba(0,0,0,0.2)', scale: 0, width: '250px', height: '150px', transition: 'width,height .25s ease' }}
-          transition={{ type: 'spring', duration: 0.35 }}>
+        <div className="bg-white rounded flex-col justify-evenly items-center flex p-5" id='login'
+          style={{ boxShadow: '0px 0px 5px 5px rgba(0,0,0,0.2)', width: '250px', height: '150px', transition: 'width,height .25s ease' }}>
           <input type="text" id='name' className='m-2 w-full rounded' placeholder='Enter your name' />
           <input type="text" id='roomId' className='m-2 w-full hidden rounded' placeholder='Enter your joining code' />
           <div className="flex w-full justify-between">
@@ -131,7 +127,7 @@ const Home = () => {
             <div onClick={create} id='create' className="rounded justify-center items-center flex cursor-pointer text-white px-5 py-2"
               style={{ backgroundColor: color1 ,boxShadow: '0px 3px 3px 0px rgba(0,0,0,0.2)' }}>CREATE</div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
