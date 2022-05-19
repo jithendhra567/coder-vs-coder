@@ -12,7 +12,7 @@ import { useLocation } from "react-router-dom";
 import { Constants } from '../utils/constant';
 import { linkWithCompletedMoves, deleteMove, fetchGraphQL } from '../utils/mutations';
 
-const Board = () => {
+const Board = (props: {setUsers: Function}) => {
   const location: any = useLocation();
   const roomId: string = location.state.roomId;
   const userName: string = location.state.userName;
@@ -124,7 +124,10 @@ const Board = () => {
   completedMovesSubscription();
 
   //updating room data  
-  useEffect(()=> setUsers(roomData.current?roomData.current.users:[]) , [roomData.current]);
+  useEffect(()=> {
+    setUsers(roomData.current?roomData.current.users:[]);
+    props.setUsers(roomData.current?roomData.current.users:[]);
+  }, [roomData.current]);
 
   //updating moves data
   const updateMovesData = () => {

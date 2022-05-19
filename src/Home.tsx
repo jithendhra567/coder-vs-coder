@@ -48,7 +48,7 @@ const Home = () => {
     const roomIdDoc:any = document.getElementById('roomId');
     const nameDoc: any = document.getElementById('name');
     if (nameDoc && roomIdDoc && isJoining.current) {
-      joinRoom(nameDoc.value, color2, roomIdDoc.value, [18, 18], nameDoc.value+""+new Date().getTime());
+      joinRoom(nameDoc.value, color2, roomIdDoc.value, [24, 24], nameDoc.value+""+new Date().getTime());
       return;
     }
     if (loginDoc && createDoc && roomIdDoc) {
@@ -113,7 +113,6 @@ const Home = () => {
       <div className="w-1/2 h-full justify-evenly flex flex-col items-center">
         <p className="text-3xl " style={{fontFamily: 'ui-monospace'}}>ME vs ME</p>
         <div className="w-3/4 h-3/4 rounded" style={{boxShadow: '0px 2px 5px 0px rgba(0,0,0,0.2)'}}>
-
         </div>
       </div>
       <div className="w-1/2 bg-gray-800 h-full justify-center items-center flex">

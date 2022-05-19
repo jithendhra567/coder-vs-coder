@@ -5,7 +5,7 @@ import CodeMirror, { IEditorInstance } from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
 import 'codemirror/theme/material.css';
 import gsap from 'gsap';
-import { color1, color2, Constants, green, Move, Moves, red, Room, roomDataAtom, Terminal } from '../utils/constant';
+import { color1, color2, Constants, green, Move, Moves, red, Room, roomDataAtom, Terminal, User } from '../utils/constant';
 import { useEffect } from 'react';
 import { createRef } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -16,7 +16,7 @@ type CompilerProps = {
   completedMoves: Moves;
 };
 
-const Compiler = () => {
+const Compiler = (props: {users: User[]}) => {
 
   //constants
   const [terminals, setTerminals] = React.useState<Terminal[]>([]);
@@ -130,20 +130,37 @@ const Compiler = () => {
   }
 
   return (
-    <div className="h-full w-1/2 relative compiler">
-      <div className="w-full bg-white-900" style={{ boxShadow: '0px 2px 10px 5px rgba(0,0,0,0.2)', height: '5%' }}></div>
-      <div className="p-5" style={{ height: '40%', }}>
-        <div className="flex items-center justify-between mb-2">
+    <div className="h-full w-1/2 relative compiler" style={{background: '#e7e7e7'}}>
+      <div className="w-full flex items-center justify-between bg-white-900 shadow-xl bg-white" style={{ height: '7%' }}>
+        <div className="mx-5 my-2">
+          <p className="text-xs">You</p>
+          <p className='text-xl font-bold'>1000</p>
+        </div>
+        <div className="flex items-center ">
+          <p className='text-2xl font-bold'>#</p>
+          <p className='text-xl font-bold ml-2'>{roomId}</p>
+          <img src="https://cdn-icons-png.flaticon.com/128/126/126498.png" alt="" className='w-4 h-4 ml-2' />
+        </div>
+        <div className="mx-5 my-2">
+          <p className="text-xs">{props.users[1]?props.users[1].name:"Wating for player"}</p>
+          <p className='text-xl text-center font-bold'>1000</p>
+        </div>
+      </div>
+      <div className="px-5 pb-8 pt-3 mx-3 mt-5 shadow-xl rounded" style={{ height: '36%', background: "#fff"}}>
+        <div className="flex items-center justify-between mb-2 font-bold">
           <p>Write you're code</p>
           <p onClick={run} className='cursor-pointer text-center py-2 px-4 rounded text-sm text-white' style={{ boxShadow: '2px 2px 2px 0px rgba(0,0,0,0.2)', background: color1}}>Run</p>
         </div> 
         <CodeMirror ref={codeRef} width='100%' height='90%' options={{ theme: 'material', keyMap: 'sublime', mode: 'js', }} />
       </div>
       <div className="p-5" style={{ height: '50%', overflowY: 'scroll' }}>
-        <h3 style={{background: '#e3e3e3', borderLeft: '5px solid '+color1}} className='p-2 rounded'>Recent codes</h3>
+        <h3 style={{background: '#fff', borderLeft: '5px solid '+color1}} className='p-2 rounded'>Recent codes</h3>
         {terminals.map(terminal => <Terminal key={terminal.id} id={terminal.id} code={terminal.code} powerUsed={terminal.powerUsed}/>)}
       </div>
-      <div className="w-full bg-white-900" style={{boxShadow: '0px 5px 10px 5px rgba(0,0,0,0.2)', height: '5%'}}></div>
+      <div className="w-full bg-white-900 flex items-center justify-between" style={{boxShadow: '0px 5px 10px 5px rgba(0,0,0,0.2)', height: '5%'}}>
+        <p></p>
+        <img src="https://cdn-icons-png.flaticon.com/128/1286/1286853.png" alt="" className='w-6 mx-5' />
+      </div>
     </div>
   );
 };
