@@ -111,8 +111,34 @@ const Home = () => {
   return (
     <div className='flex h-screen font-serif'>
       <div className="w-1/2 h-full justify-evenly flex flex-col items-center">
-        <p className="text-3xl " style={{fontFamily: 'ui-monospace'}}>ME vs ME</p>
-        <div className="w-3/4 h-3/4 rounded" style={{boxShadow: '0px 2px 5px 0px rgba(0,0,0,0.2)'}}>
+        <p className="text-3xl " style={{fontFamily: 'ui-monospace'}}>Coder vs Coder</p>
+        <div className="w-3/4 h-3/4 rounded p-4" style={{boxShadow: '0px 2px 5px 0px rgba(0,0,0,0.2)'}}>
+          <h1 className='text-xl font-bold underline'>Documentation</h1>
+          <h3 className='text-lg font-semibold mt-6'>Methods : </h3>
+          <div>
+            <p className='font-semibold mt-4 underline'>Move</p>
+            <p className='font-light'>Move = (int i, int j): Promise</p>
+            <ul>
+              <li>{'\u2022'} Parameters 'i' represents a row in the matrix</li>
+              <li>{'\u2022'} Parameters 'j' represents a column in the matrix</li>
+              <li>{'\u2022'} Return type is a Promise in javascript</li>
+              <li>{'\u2022'} To use multiple moves at a time use 'await move(1,2) in a async function'</li>
+            </ul>  
+            <p className='font-semibold'>Description</p>
+            <p className='font-light'>This method moves the user to the given position in the matrix</p>
+          </div>
+          <div>
+            <p className='font-semibold mt-4 underline'>Attack</p>
+            <p className='font-light'>Attack = (int i, int j): Promise</p>
+            <ul>
+              <li>{'\u2022'} Parameters 'i' represents a row in the matrix</li>
+              <li>{'\u2022'} Parameters 'j' represents a column in the matrix</li>
+              <li>{'\u2022'} Return type is a Promise in javascript</li>
+              <li>{'\u2022'} To use multiple moves at a time use 'await move(1,2) in a async function'</li>
+            </ul>  
+            <p className='font-semibold'>Description</p>
+            <p className='font-light'>This method attacks the user to the given position in the matrix</p>
+          </div>
         </div>
       </div>
       <div className="w-1/2 bg-gray-800 h-full justify-center items-center flex">
